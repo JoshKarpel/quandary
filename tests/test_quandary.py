@@ -36,6 +36,7 @@ def test_fallthrough_without_default():
 @given(
     values = st.lists(
         elements = st.sampled_from([
+            st.text(),
             st.integers(),
             st.floats(),
             st.complex_numbers(),
@@ -47,6 +48,7 @@ def test_fallthrough_without_default():
     ),
     results = st.lists(
         elements = st.sampled_from([
+            st.text(),
             st.integers(),
             st.floats(),
             st.complex_numbers(),
@@ -73,6 +75,7 @@ def test_fallthrough_with_default(values, results):
 @given(
     values = st.lists(
         elements = st.sampled_from([
+            st.text(),
             st.integers(),
             st.floats(),
             st.complex_numbers(),
@@ -84,6 +87,7 @@ def test_fallthrough_with_default(values, results):
     ),
     results = st.lists(
         elements = st.sampled_from([
+            st.text(),
             st.integers(),
             st.floats(),
             st.complex_numbers(),
@@ -109,7 +113,9 @@ def test_quandary__noniterable_values(values, results):
 
 def test_quandary__expand():
     with quandary(10) as q:
-        q.case(range(20), True, expand = True)
-        q.case(range(20, 40), False, expand = True)
+        q.case(range(20), True, force_unpack = True)
+        q.case(range(20, 40), False, force_unpack = True)
+
+        print(q.cases)
 
     assert q.result
