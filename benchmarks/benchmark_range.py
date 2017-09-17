@@ -1,8 +1,8 @@
-from IPython import get_ipython
-
 from quandary import quandary
 
-ipython = get_ipython()
+
+# from IPython import get_ipython
+# ipython = get_ipython()
 
 
 def ifs(target, end):
@@ -11,15 +11,36 @@ def ifs(target, end):
             return i
 
 
-def quan(target, end):
+def quan_using_range(target, end):
     with quandary(target) as q:
         q.case(range(end), lambda x: x, force_unpack = True)
 
     return q.result
 
 
-ipython.magic("timeit ifs(500, 1000)")
-ipython.magic("timeit quan(500, 1000)")
+def quan_lots_of_cases(target, end):
+    with quandary(target) as q:
+        for i in range(end):
+            q.case(i, i)
 
-# ifs(5, 10)
-# quan(5, 10)
+    return q.result
+
+
+target = 1
+end = 1000
+
+# print('ifs')
+# ipython.magic(f"timeit ifs({target}, {end})")
+# print()
+#
+# print('quan_using_range')
+# ipython.magic(f"timeit quan_using_range({target}, {end})")
+# print()
+#
+# print('quan_lots_of_cases')
+# ipython.magic(f"timeit quan_lots_of_cases({target}, {end})")
+# print()
+
+ifs(target, end)
+quan_using_range(target, end)
+quan_lots_of_cases(target, end)
