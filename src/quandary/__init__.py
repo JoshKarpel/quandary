@@ -24,6 +24,7 @@ class InvalidKey(QuandaryException):
 
 
 def closed_range(start, stop, step):
+    """Return a `range` that includes the endpoint."""
     return range(start, stop + 1, step)
 
 
@@ -34,7 +35,7 @@ class ContainerDict(dict):
     These "container keys" have lower priority than any true dictionary keys in the `ContainerDict`.
 
     Subclassing from dict instead of `collections.UserDict` is a ~30% speedup for certain benchmarks.
-    It's not generally safe, but we only use the `ContainerDict` for one very specific purpose, and we've overridden the things we need to for that to work.
+    It's generally not safe, but we only use the `ContainerDict` for one very specific purpose, and we've overridden the things we need to for that to work.
     """
 
     def __init__(self, *args, **kwargs):
@@ -66,10 +67,18 @@ class ContainerDict(dict):
 
 
 class quandary:
+    """A context manager that implements a switch statement."""
+
     _no_result = object()
 
     def __init__(self, control: Any):
-        self._value = control
+        """
+        Parameters
+        ----------
+        control
+            The control value for the quandary.
+        """
+        self._control = control
         self._cases = ContainerDict()
         self._result = self._no_result
 
@@ -77,17 +86,42 @@ class quandary:
         return self
 
     def case(self, key: Union[Hashable, Container], result: Union[Callable, Any], force_contains: bool = False, **kwargs):
+        """
+        Adds a case to the quandary with key `key` and possible result `result`.
+
+        Parameters
+        ----------
+        key
+            Either a hashable or a container that is checked against the control.
+        result
+            What the result of the quandary will be if this case matches. Can be a value or a callable.
+        force_contains
+            If `True`, forces the key to be treated as a container even if it is hashable.
+        kwargs
+            Keywords arguments are passed to the `result` if it is callable.
+        """
         self._cases.__setitem__(key, (result, kwargs), force_contains = force_contains)
 
     def default(self, result: Union[Callable, Any], **kwargs):
+        """
+        Add a case that is used if no explicit case is matched.
+
+        Parameters
+        ----------
+        result
+            The result of the quandary if no case matches.
+        kwargs
+            Keywords arguments are passed to the `result` if it is callable.
+        """
         self._default = result, kwargs
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        """When the `with` block ends the quandary determines which case the control matches and assigns the value of that case to its result."""
         if exc_type is not None:
-            return False
+            return False  # returning False from __exit__ propagates the exception
 
         try:
-            result, kwargs = self._cases[self._value]
+            result, kwargs = self._cases[self._control]
         except KeyError:
             try:
                 result, kwargs = self._default
@@ -95,12 +129,13 @@ class quandary:
                 raise NoMatch('Failed to match any case and no default has been set')
 
         if callable(result):
-            result = result(self._value, **kwargs)
+            result = result(self._control, **kwargs)
 
         self._result = result
 
     @property
     def result(self) -> Any:
+        """A property that gets the result of the quandary, if the quandary has been evaluated."""
         if self._result is self._no_result:
             raise UnevaluatedQuandary("You haven't left the with block, so the quandary hasn't been evaluated yet")
 

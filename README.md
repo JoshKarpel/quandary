@@ -29,7 +29,7 @@ control = get_control()
 with quandary(control) as q:
     q.case(5, do_first)
     q.case('foo', do_second)
-    q.case(['bar', 'baz'], some_value, force_contains = True)
+    q.case(('bar', 'baz'), some_value, force_contains = True)
     q.case(('a', 'b', 'c'), some_other_value)
     q.default(do_default)
    
@@ -51,9 +51,13 @@ Quandaries accept two types of case keys:
 2. Something with a `__contains__()` method (i.e., a container that can be used with `in`).
 
 Nothing else can be used a case key.
-If a key is hashable, it's assumed that you want to perform a match against that specific object (via standard dictionary key access, i.e., an equality check).
-In the second case, the `quandary` result will be determined by the first case for which `control in key` is `True`.
+If a key is hashable, it's assumed that you want to perform a match against that specific object (via standard dictionary key lookup rules).
+If a key is not hashable, it's assumed that you want to perform a containment test: the result will be determined by the first case for which `control in key` is `True`.
 A key that is hashable can forced to use the logic of the second type of case key via the `quandary.case()` keyword argument `force_contains = True`.
+
+All type-1 cases are checked before any type-2 cases.
+Type-2 cases are checked in the order they are added to the `quandary`.
+Be wary of case keys overlapping.
 
 Case values can be any object, including a callable.
 Callable values are passed the control as a positional argument, followed by any keyword arguments passed to the `quandary.case()` method.
@@ -68,6 +72,7 @@ Cases are stored in a specialized `dict` subclass that seamlessly handles the se
 * More ways to specify case keys?
     * A test function that returns a boolean.
     * A comparator function that is called on the control before comparison.
+* Protect against duplicate case keys.
 
 ## Assorted Miscellany
 
