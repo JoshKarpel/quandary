@@ -1,8 +1,13 @@
 from quandary import quandary
 
+from IPython import get_ipython
 
-# from IPython import get_ipython
-# ipython = get_ipython()
+ipython = get_ipython()
+
+
+def dct(target, end):
+    dct = dict(zip(range(end), range(end)))
+    return dct[target]
 
 
 def ifs(target, end):
@@ -13,7 +18,7 @@ def ifs(target, end):
 
 def quan_using_range(target, end):
     with quandary(target) as q:
-        q.case(range(end), lambda x: x, force_unpack = True)
+        q.case(range(end), lambda x: x, force_contains = True)
 
     return q.result
 
@@ -26,21 +31,25 @@ def quan_lots_of_cases(target, end):
     return q.result
 
 
-target = 1
+target = 10
 end = 1000
 
-# print('ifs')
+# print('dict')
 # ipython.magic(f"timeit ifs({target}, {end})")
 # print()
 #
-# print('quan_using_range')
-# ipython.magic(f"timeit quan_using_range({target}, {end})")
+# print('ifs')
+# ipython.magic(f"timeit ifs({target}, {end})")
 # print()
-#
+
+print('quan_using_range')
+ipython.magic(f"timeit quan_using_range({target}, {end})")
+print()
+
 # print('quan_lots_of_cases')
 # ipython.magic(f"timeit quan_lots_of_cases({target}, {end})")
 # print()
 
-ifs(target, end)
-quan_using_range(target, end)
-quan_lots_of_cases(target, end)
+# ifs(target, end)
+# quan_using_range(target, end)
+# quan_lots_of_cases(target, end)

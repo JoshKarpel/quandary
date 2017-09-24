@@ -5,19 +5,6 @@ import hypothesis.strategies as st
 from quandary import quandary, UnevaluatedQuandary, NoMatch
 
 
-def test_no_result_neq_no_result():
-    q1 = quandary('foo')
-    q2 = quandary('bar')
-
-    print(q1.__dict__)
-
-    nr1 = q1._quandary__no_result
-    nr2 = q2._quandary__no_result
-
-    assert nr1 is not nr2
-    assert nr1 != nr2
-
-
 def test_unevaluated():
     with pytest.raises(UnevaluatedQuandary):
         with quandary('hello') as q:
@@ -64,9 +51,9 @@ def test_fallthrough_with_default(values, results):
     result = results.pop()
 
     with quandary(value) as q:
-        q.default = result
         for v, r in zip(values, results):
             q.case(v, r)
+        q.default(result)
 
     assert q.result == result
 
@@ -113,9 +100,7 @@ def test_quandary__noniterable_values(values, results):
 
 def test_quandary__expand():
     with quandary(10) as q:
-        q.case(range(20), True, force_unpack = True)
-        q.case(range(20, 40), False, force_unpack = True)
-
-        print(q.cases)
+        q.case(range(20), True, force_contains = True)
+        q.case(range(20, 40), False, force_contains = True)
 
     assert q.result

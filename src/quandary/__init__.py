@@ -1,89 +1,107 @@
-from typing import Any, Callable, Union
-from collections import UserDict
+"""
+A truly terrible switch statement for Python.
+
+Copyright (c) 2017 Josh Karpel
+"""
+
+from typing import Any, Callable, Union, Hashable, Container
 
 
-class UnevaluatedQuandary(Exception):
+class QuandaryException(Exception):
     pass
 
 
-class NoMatch(Exception):
+class UnevaluatedQuandary(QuandaryException):
     pass
 
 
-class QuandaryDict(UserDict):
+class NoMatch(QuandaryException):
+    pass
+
+
+class InvalidKey(QuandaryException):
+    pass
+
+
+def closed_range(start, stop, step):
+    return range(start, stop + 1, step)
+
+
+class ContainerDict(dict):
     """
-    A dictionary that stores unhashable iterable keys as tuples.
+    A dictionary that can also store unhashable "keys" that implement the `in` operator via a `__contains__` method.
     You get the value of that key back out by accessing an element of that iterable.
+    These "container keys" have lower priority than any true dictionary keys in the `ContainerDict`.
+
+    Subclassing from dict instead of `collections.UserDict` is a ~30% speedup for certain benchmarks.
+    It's not generally safe, but we only use the `ContainerDict` for one very specific purpose, and we've overridden the things we need to for that to work.
     """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.unhashable_data = {}
+        self.containers = []
 
     def __getitem__(self, item):
         try:
             return super().__getitem__(item)
         except KeyError:
-            for key, value in self.unhashable_data.items():
+            for key, value in self.containers:
                 if item in key:
                     return value
             raise KeyError
 
-    def __setitem__(self, key, value, force_unpack = False):
+    def __setitem__(self, key, result_and_kwargs, force_contains = False):
         try:
-            if force_unpack:
+            if force_contains:
                 raise TypeError
-            super().__setitem__(key, value)
+            super().__setitem__(key, result_and_kwargs)
         except TypeError:  # unhashable
-            if not any(isinstance(key, typ) for typ in [str, range]):
-                key = tuple(key)
-            self.unhashable_data[key] = value
+            if not hasattr(key, '__contains__'):
+                raise InvalidKey("{key} is not hashable and does not have a __contains__ method, so it cannot be used as the key of a quandary's case")
+            self.containers.append((key, result_and_kwargs))
 
     def __str__(self):
-        return f'{self.data} | {self.unhashable_data}'
+        return f'{self} | {self.containers}'
 
 
 class quandary:
-    def __init__(self, value: Any):
-        self.value = value
-        self.cases = QuandaryDict()
-        self.__no_result = object()
-        self.__result = self.__no_result
+    _no_result = object()
 
-        self.result_kwargs = QuandaryDict()
+    def __init__(self, control: Any):
+        self._value = control
+        self._cases = ContainerDict()
+        self._result = self._no_result
 
     def __enter__(self):
         return self
+
+    def case(self, key: Union[Hashable, Container], result: Union[Callable, Any], force_contains: bool = False, **kwargs):
+        self._cases.__setitem__(key, (result, kwargs), force_contains = force_contains)
+
+    def default(self, result: Union[Callable, Any], **kwargs):
+        self._default = result, kwargs
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is not None:
             return False
 
         try:
-            result = self.cases[self.value]
+            result, kwargs = self._cases[self._value]
         except KeyError:
             try:
-                result = self.default
+                result, kwargs = self._default
             except AttributeError:
-                raise NoMatch('The switch fell through with no default')
+                raise NoMatch('Failed to match any case and no default has been set')
 
         if callable(result):
-            result = result(self.value, **self.result_kwargs[self.value])
+            result = result(self._value, **kwargs)
 
-        self.__result = result
-
-    def case(self, value: Any, result: Union[Callable, Any], force_unpack = False, **kwargs):
-        if not force_unpack:
-            self.cases[value] = result
-            self.result_kwargs[value] = kwargs
-        else:
-            self.cases.__setitem__(value, result, force_unpack = force_unpack)
-            self.result_kwargs.__setitem__(value, kwargs, force_unpack = force_unpack)
+        self._result = result
 
     @property
     def result(self) -> Any:
-        if self.__result is self.__no_result:
+        if self._result is self._no_result:
             raise UnevaluatedQuandary("You haven't left the with block, so the quandary hasn't been evaluated yet")
 
-        return self.__result
+        return self._result
