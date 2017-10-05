@@ -3,17 +3,14 @@ import os
 
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
 
-with open(os.path.join(THIS_DIR, 'README.md')) as f:
-    long_desc = f.read()
-
 setup(
     name = 'quandary',
-    version = '0.1.0',
+    version = '0.1.2',
     author = 'Josh Karpel',
     author_email = 'josh.karpel@gmail.com',
     license = '',
-    description = 'A switch/case statement for Python.',
-    long_description = long_desc,
+    description = 'A truly terrible switch/case statement for Python.',
+    long_description = '',
     url = 'https://github.com/JoshKarpel/quandary',
     classifiers = [
         'Development Status :: 2 - Pre-Alpha',
